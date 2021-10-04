@@ -346,6 +346,16 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         await player.teardown()
         await ctx.send("Disconnected.")
 
+    @commands.command(name="resume")
+    async def resume_command(self,ctx,*,query: t.Optional[str]):
+         player = self.get_player(ctx)
+
+         if query is None:
+            if player.queue.is_empty:
+                raise QueueIsEmpty
+            await player.set_pause(False)
+            await ctx.send("Playback resumed.")
+
     @commands.command(name="play")
     async def play_command(self, ctx, *, query: t.Optional[str]):
         player = self.get_player(ctx)
@@ -535,6 +545,9 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
     @commands.command(name = "current") 
     async def current_command(self,ctx):
         player = self.get_player(ctx)
+        if player.queue.is_empty:
+            raise QueueIsEmpty
+
         embed = discord.Embed(
             title="Currently Playing",
             description = getattr(player.queue.current_track, "title", "No tracks currently playing"),
@@ -754,6 +767,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
         await player.seek(secs * 1000)
         await ctx.send("Seeked.")
+        
 
 
 def setup(bot):
