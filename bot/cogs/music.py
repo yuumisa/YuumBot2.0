@@ -7,6 +7,7 @@ import typing as t
 from enum import Enum
 
 import aiohttp
+from aiohttp.helpers import guess_filename
 import discord
 import wavelink
 from discord.ext import commands
@@ -524,11 +525,18 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         )
         if history := player.queue.history:
             index = range(0,len(history))
-            embed.add_field(
-                name="What you missed",
-                value="\n".join(t.title for t in reversed(history[show:])),
-                inline=True
-            )
+            if(len(history) > 10):
+                embed.add_field(
+                    name="What you missed",
+                    value="\n".join(t.title for t in reversed(history[len(history)-show:len(history)])),
+                    inline=True
+                )
+            if(len(history) <= 10):
+                embed.add_field(
+                    name="What you missed",
+                    value="\n".join(t.title for t in reversed(history[:show])),
+                    inline=True
+                )
             embed.add_field(
                 name = "Number",
                 value = "\n".join(str(t + 1) for t in index[:show]),
