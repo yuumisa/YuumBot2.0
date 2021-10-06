@@ -485,11 +485,18 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         if upcoming := player.queue.upcoming:
             index = range(0,len(upcoming))
             print(index)
-            embed.add_field(
-                name="Next up",
-                value="\n".join(t.title for t in upcoming[:show]),
-                inline=True
-            )
+            if(len(upcoming) > 10):
+                embed.add_field(
+                    name="Next up",
+                    value="\n".join(t.title for t in upcoming[0:show]),
+                    inline=True
+                )
+            if(len(upcoming) <= 10):
+                embed.add_field(
+                    name="Next up",
+                    value="\n".join(t.title for t in upcoming[:show]),
+                    inline=True
+                )
             embed.add_field(
                 name = "Number",
                 value = "\n".join(str(t + 1) for t in index[:show]),
