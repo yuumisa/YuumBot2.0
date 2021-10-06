@@ -526,7 +526,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
             index = range(0,len(history))
             embed.add_field(
                 name="What you missed",
-                value="\n".join(t.title for t in history[:show]),
+                value="\n".join(t.title for t in reversed(history[show:])),
                 inline=True
             )
             embed.add_field(
@@ -768,6 +768,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         await player.seek(secs * 1000)
         await ctx.send("Seeked.")
         
+    
 
 
 def setup(bot):
