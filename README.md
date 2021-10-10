@@ -4,9 +4,9 @@ Based off code from Carberra. Plans to add additional functionalities include Sp
 
 Currently Added Features:
 
-Youtube url's
-Youtube search
-Youtube playlist
+Youtube url's,
+Youtube search,
+Youtube playlist,
 Seek, shuffle, volume control, equalizer, etc.
 
 10/10/2021 - 
