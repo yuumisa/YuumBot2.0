@@ -5,13 +5,26 @@ import random
 import re
 import typing as t
 from enum import Enum
-
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+import os
+# from variables import *
 import aiohttp
 from aiohttp.helpers import guess_filename
 import discord
 import wavelink
 from discord.ext import commands
 
+with open("data/client.0", "r", encoding = "utf-8") as f:
+    cID = f.read()
+with open("data/secret.0", "r", encoding = "utf-8") as f:
+    sID = f.read()
+
+
+os.environ["SPOTIPY_CLIENT_ID"] = cID
+os.environ["SPOTIPY_CLIENT_SECRET"] = sID
+auth_manager = SpotifyClientCredentials()
+sp = spotipy.Spotify(auth_manager=auth_manager)
 URL_REGEX = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
 LYRICS_URL = "https://some-random-api.ml/lyrics?title="
 HZ_BANDS = (20, 40, 63, 100, 150, 250, 400, 450, 630, 1000, 1600, 2500, 4000, 10000, 16000)
@@ -405,6 +418,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         player = self.get_player(ctx)
         player.queue.empty()
         await player.stop()
+        await player.set_pause(False)
         await ctx.send("Playback stopped.")
 
     @commands.command(name="next", aliases=["skip"])
@@ -782,8 +796,43 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
         await player.seek(secs * 1000)
         await ctx.send("Seeked.")
-        
-    
+
+# Spotipy stuff?
+
+
+    @commands.command(name = "spotify")
+    async def spotify_command(self, ctx, query):
+        track = sp.track(query, "US")
+        name = track['name']
+        artist = track['artists'][0]['name']
+        result = str(name) + " " + str(artist)
+        # await self.bot.get_command('play').callback(ctx,result)
+        player = self.get_player(ctx)
+
+        if not player.is_connected:
+            await player.connect(ctx)
+
+        if query is None:
+            if player.queue.is_empty:
+                raise QueueIsEmpty
+
+            await player.set_pause(False)
+            await ctx.send("Playback resumed.")
+
+        else:
+            result = result.strip("<>")
+            if not re.match(URL_REGEX, result):
+                query = f"ytsearch:{result}"
+
+            await player.add_tracks(ctx, await self.wavelink.get_tracks(query))
+
+    @commands.command(name='splaylist')
+    async def splaylist_command(self,ctx,link):
+        tracks = sp.playlist_items(link)
+        limit = int(tracks['total'])
+        for i in range(limit):
+            track = tracks['items'][i]['track']['name']
+            
 
 
 def setup(bot):
