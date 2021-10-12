@@ -131,6 +131,14 @@ class Queue:
             return self._queue[self.position]
 
     @property
+    def next_track(self):
+        if not self._queue:
+            raise QueueIsEmpty
+
+        if self.position <= len(self._queue) - 1:
+            return self._queue[self.position + 1]
+
+    @property
     def upcoming(self):
         if not self._queue:
             raise QueueIsEmpty
@@ -231,6 +239,21 @@ class Player(wavelink.Player):
         if not self.is_playing and not self.queue.is_empty:
             await self.start_playback()
 
+    async def add_spotify(self, ctx, tracks):
+        if not tracks:
+            raise NoTracksFound
+
+        if isinstance(tracks, wavelink.TrackPlaylist):
+            self.queue.add(*tracks.tracks)
+        elif len(tracks) == 1:
+            self.queue.add(tracks[0])
+        else:
+            if (track := await self.choose_spotify(ctx, tracks)) is not None:
+                self.queue.add(track)
+
+        if not self.is_playing and not self.queue.is_empty:
+            await self.start_playback()
+
     async def choose_track(self, ctx, tracks):
         def _check(r, u):
             return (
@@ -265,6 +288,9 @@ class Player(wavelink.Player):
         else:
             await msg.delete()
             return tracks[OPTIONS[reaction.emoji]]
+
+    async def choose_spotify(self, ctx, tracks):
+        return tracks[0]
 
     async def start_playback(self):
         await self.play(self.queue.current_track)
@@ -445,7 +471,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         if not player.queue.history:
             raise NoPreviousTracks
 
-        player.queue.position -= 2
+        player.queue.position -= 1
         await player.stop()
         await ctx.send("Playing previous track in queue.")
 
@@ -502,7 +528,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
             if(len(upcoming) > 10):
                 embed.add_field(
                     name="Next up",
-                    value="\n".join(t.title for t in upcoming[0:show]),
+                    value="\n".join(t.title for t in upcoming[:show]),
                     inline=True
                 )
             if(len(upcoming) <= 10):
@@ -755,7 +781,9 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
         player.queue.position = player.queue.position + index - 1
         await player.stop()
-        await ctx.send(f"Playing track in position {index}.")
+        current = player.queue.next_track.title
+        print(current)
+        await ctx.send(f"Playing track in position {index} \n" + str(current))
 
     @skipto_command.error
     async def skipto_command_error(self, ctx, exc):
@@ -797,8 +825,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         await player.seek(secs * 1000)
         await ctx.send("Seeked.")
 
-# Spotipy stuff?
-
+# Spotipy stuff
 
     @commands.command(name = "spotify")
     async def spotify_command(self, ctx, query):
@@ -828,11 +855,36 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
 
     @commands.command(name='splaylist')
     async def splaylist_command(self,ctx,link):
-        tracks = sp.playlist_items(link)
-        limit = int(tracks['total'])
+        results = sp.playlist_items(link)
+        limit = int(results['total'])
+        tracks = results['items']
+        while results['next']:
+            results = sp.next(results)
+            tracks.extend(results['items'])
         for i in range(limit):
-            track = tracks['items'][i]['track']['name']
-            
+            artist = tracks[i]['track']['artists'][0]['name']
+            track = tracks[i]['track']['name'] + " " + str(artist)
+            print(str(i) + ": " + str(track))
+            player = self.get_player(ctx)
+
+            if not player.is_connected:
+                await player.connect(ctx)
+
+            if link is None:
+                if player.queue.is_empty:
+                    raise QueueIsEmpty
+
+                await player.set_pause(False)
+                await ctx.send("Playback resumed.")
+
+            else:
+                track = track.strip("<>")
+                if not re.match(URL_REGEX, track):
+                    query = f"ytsearch:{track}"
+
+                await player.add_spotify(ctx, await self.wavelink.get_tracks(query))
+        #for a in range(limit):
+        #    print((tracks['items'][a]['track']['artists'][0]['name']))
 
 
 def setup(bot):
