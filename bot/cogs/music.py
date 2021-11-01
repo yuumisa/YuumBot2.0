@@ -249,6 +249,7 @@ class Player(wavelink.Player):
             self.queue.add(tracks[0])
         else:
             if (track := await self.choose_spotify(ctx, tracks)) is not None:
+                print(f"Added {track.title} to the queue.")
                 self.queue.add(track)
 
         if not self.is_playing and not self.queue.is_empty:
@@ -298,6 +299,7 @@ class Player(wavelink.Player):
     async def advance(self):
         try:
             if (track := self.queue.get_next_track()) is not None:
+                print(str(track))
                 await self.play(track)
         except QueueIsEmpty:
             pass
@@ -367,6 +369,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         player.queue.empty()
         await ctx.send("Queue has been cleared.")
 
+
     @commands.command(name="connect", aliases=["join"])
     async def connect_command(self, ctx, *, channel: t.Optional[discord.VoiceChannel]):
         player = self.get_player(ctx)
@@ -383,6 +386,7 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
     @commands.command(name="disconnect", aliases=["leave"])
     async def disconnect_command(self, ctx):
         player = self.get_player(ctx)
+        player.queue.empty()
         await player.teardown()
         await ctx.send("Disconnected.")
 
@@ -864,7 +868,6 @@ class Music(commands.Cog, wavelink.WavelinkMixin):
         for i in range(limit):
             artist = tracks[i]['track']['artists'][0]['name']
             track = tracks[i]['track']['name'] + " " + str(artist)
-            print(str(i) + ": " + str(track))
             player = self.get_player(ctx)
 
             if not player.is_connected:
